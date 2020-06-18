@@ -53,59 +53,41 @@ public class MainActivity extends AppCompatActivity {
     private int partnerHandInt;
     private int deviceIndex;
 
-    //TODO no landscape mode
     //TODO check button scopes
     //TODO check on variable scopes
     //TODO button disables and enables
-    //TODO put in result dialog background color code
     //TODO put in disconnect resetting
     //TODO after result resetting
     //TODO partnerdevice name updates when receiving a connection
+    //TODO dialog window close should not close app but "reset" it
+    //TODO ready should only get enabled if there is a hand chosen
+    //TODO game should only run if you are ready
 
     BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            partnerHandInt = intent.getIntExtra("theMessage", 0);
-            game();
-        }
-    };
 
-    private final BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            final String action = intent.getAction();
-            if (action.equals(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED)) {
-
-                int mode = intent.getIntExtra(BluetoothAdapter.EXTRA_CONNECTION_STATE, BluetoothAdapter.ERROR);
-
-                switch (mode) {
-                    case BluetoothAdapter.STATE_DISCONNECTING:
-                        break;
-                    case BluetoothAdapter.STATE_DISCONNECTED:
-                        connectButton.setEnabled(true);
-                        nextButton.setEnabled(true);
-                        previousButton.setEnabled(true);
-                        break;
-                    case BluetoothAdapter.STATE_CONNECTING:
-                        connectButton.setText("connecting");
-                        connectButton.setEnabled(false);
-                        nextButton.setEnabled(false);
-                        previousButton.setEnabled(false);
-                        break;
-                    case BluetoothAdapter.STATE_CONNECTED:
-                        connectButton.setText("connected");
-                        readyButton.setEnabled(true);
-                        break;
-                }
+            String action = intent.getAction();
+            if (action.equals("incomingMessage")) {
+                partnerHandInt = intent.getIntExtra("theMessage", 0);
+                //connecteddeviceinfo
+                game();
+            }else if (action.equals("connectedBroadcast")){
+                connectButton.setEnabled(false);
+                connectButton.setText("connected");
+                nextButton.setEnabled(false);
+                previousButton.setEnabled(false);
+                readyButton.setEnabled(true);
             }
         }
     };
 
     @Override
     protected void onDestroy() {
-        unregisterReceiver(mBroadcastReceiver);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(mReceiver);
         super.onDestroy();
     }
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -114,26 +96,23 @@ public class MainActivity extends AppCompatActivity {
 
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
-        BTSmartPhones =     new ArrayList<>();
+        BTSmartPhones = new ArrayList<>();
 
         deviceIndex = 0;
 
-        radialButton =      findViewById(R.id.radial_button);
-        rockButton =        findViewById(R.id.rock);
-        paperButton =       findViewById(R.id.paper);
-        scissorsButton =    findViewById(R.id.scissors);
-        readyButton =       findViewById(R.id.ready);
-        connectButton =     findViewById(R.id.connection);
-        nextButton =        findViewById(R.id.next);
-        previousButton =    findViewById(R.id.previous);
+        radialButton    = findViewById(R.id.radial_button);
+        rockButton      = findViewById(R.id.rock);
+        paperButton     = findViewById(R.id.paper);
+        scissorsButton  = findViewById(R.id.scissors);
+        readyButton     = findViewById(R.id.ready);
+        connectButton   = findViewById(R.id.connection);
+        nextButton      = findViewById(R.id.next);
+        previousButton  = findViewById(R.id.previous);
+        partnerTextView = findViewById(R.id.deviceName);
 
-        partnerTextView =   findViewById(R.id.deviceName);
-
-
-        IntentFilter intentFilter = new IntentFilter(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED);
-        registerReceiver(mBroadcastReceiver,intentFilter);
-
-        LocalBroadcastManager.getInstance(this).registerReceiver(mReceiver, new IntentFilter("incomingMessage"));
+        IntentFilter intentFilter = new IntentFilter("incomingMessage");
+        intentFilter.addAction("connectedBroadcast");
+        LocalBroadcastManager.getInstance(this).registerReceiver(mReceiver, intentFilter);
 
         initBackgroundAnim();
 

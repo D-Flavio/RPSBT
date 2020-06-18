@@ -12,7 +12,6 @@ import android.util.Log;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.charset.Charset;
 import java.util.UUID;
 
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -87,6 +86,9 @@ public class BluetoothConnectionService {
 
         mConnectedThread = new ConnectedThread(mmSocket);
         mConnectedThread.start();
+
+        Intent connected = new Intent("connectedBroadcast");
+        LocalBroadcastManager.getInstance(mContext).sendBroadcast(connected);
     }
 
     public void write(int out) {
