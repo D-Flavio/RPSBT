@@ -1,18 +1,16 @@
 package com.example.rpsbt;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothClass;
 import android.bluetooth.BluetoothDevice;
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.graphics.drawable.AnimationDrawable;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -22,7 +20,7 @@ import java.util.ArrayList;
 import java.util.Set;
 import java.util.UUID;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements BluetoothConnectionService.BluetoothListener {
 
     private BluetoothAdapter mBluetoothAdapter;
 
@@ -33,7 +31,6 @@ public class MainActivity extends AppCompatActivity {
     private BluetoothDevice mBTDevice;
 
     private String mBTDeviceName;
-    private String mBTDeviceAddress;
 
     private ImageView radialButton;
 
@@ -55,39 +52,13 @@ public class MainActivity extends AppCompatActivity {
 
     //TODO check button scopes
     //TODO check on variable scopes
-    //TODO button disables and enables
     //TODO put in disconnect resetting
     //TODO after result resetting
-    //TODO partnerdevice name updates when receiving a connection
     //TODO dialog window close should not close app but "reset" it
-    //TODO ready should only get enabled if there is a hand chosen
-    //TODO game should only run if you are ready
+    //TODO dialog finish doesnt destroy app
 
-    BroadcastReceiver mReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-
-            String action = intent.getAction();
-            if (action.equals("incomingMessage")) {
-                partnerHandInt = intent.getIntExtra("theMessage", 0);
-                //connecteddeviceinfo
-                game();
-            }else if (action.equals("connectedBroadcast")){
-                connectButton.setEnabled(false);
-                connectButton.setText("connected");
-                nextButton.setEnabled(false);
-                previousButton.setEnabled(false);
-                readyButton.setEnabled(true);
-            }
-        }
-    };
-
-    @Override
-    protected void onDestroy() {
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(mReceiver);
-        super.onDestroy();
-    }
-
+    @Nullable
+    Handler handler = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -97,6 +68,8 @@ public class MainActivity extends AppCompatActivity {
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
         BTSmartPhones = new ArrayList<>();
+
+        handler = new Handler(Looper.getMainLooper());
 
         deviceIndex = 0;
 
@@ -109,10 +82,6 @@ public class MainActivity extends AppCompatActivity {
         nextButton      = findViewById(R.id.next);
         previousButton  = findViewById(R.id.previous);
         partnerTextView = findViewById(R.id.deviceName);
-
-        IntentFilter intentFilter = new IntentFilter("incomingMessage");
-        intentFilter.addAction("connectedBroadcast");
-        LocalBroadcastManager.getInstance(this).registerReceiver(mReceiver, intentFilter);
 
         initBackgroundAnim();
 
@@ -156,65 +125,66 @@ public class MainActivity extends AppCompatActivity {
         nextButton.setOnClickListener(v -> {
             if (deviceIndex==BTSmartPhones.size() -1){
                 deviceIndex = 0;
-                getDevice();
+                getDeviceAtIndex();
             }else {
                 deviceIndex++;
-                getDevice();
+                getDeviceAtIndex();
             }
         });
 
         previousButton.setOnClickListener(v -> {
             if (deviceIndex==0){
                 deviceIndex = BTSmartPhones.size() -1;
-                getDevice();
+                getDeviceAtIndex();
             }else {
                 deviceIndex--;
-                getDevice();
+                getDeviceAtIndex();
             }
         });
     }
 
     public void checkBT() {
-        if (mBluetoothAdapter == null) {
-            Toast.makeText(this, "Device doesn't support Bluetooth", Toast.LENGTH_LONG).show();
-        } else {
+        if (mBluetoothAdapter != null) {
             checkBTState();
+        } else {
+            Toast.makeText(this, "Device doesn't support Bluetooth", Toast.LENGTH_LONG).show();
         }
     }
 
-    public void checkBTState(){
+    public void checkBTState() {
         if (mBluetoothAdapter.isEnabled()) {
             Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
             BTSmartPhones.clear();
             for (BluetoothDevice device : pairedDevices) {
-                if (device.getBluetoothClass().getDeviceClass() == BluetoothClass.Device.PHONE_SMART){
+                if (device.getBluetoothClass().getDeviceClass() == BluetoothClass.Device.PHONE_SMART) {
                     BTSmartPhones.add(device);
                 }
             }
-        }else{Toast.makeText(this, "Bluetooth is disabled", Toast.LENGTH_LONG).show(); }
-
-        if (BTSmartPhones.size() == 0){Toast.makeText(this, "No paired smart phones", Toast.LENGTH_LONG).show(); }
-        else{
-            getDevice();
-            startsBTservice();
-        }
+            if (BTSmartPhones.size() > 0) {
+                deviceIndex = 0;
+                getDeviceAtIndex();
+                startsBTService();
+            }else { Toast.makeText(this, "No paired smart phones", Toast.LENGTH_LONG).show(); }
+        }else { Toast.makeText(this, "Bluetooth is disabled", Toast.LENGTH_LONG).show(); }
     }
 
-    public void getDevice(){
+    public void getDeviceAtIndex() {
         mBTDevice = BTSmartPhones.get(deviceIndex);
         mBTDeviceName = BTSmartPhones.get(deviceIndex).getName();
-        mBTDeviceAddress = BTSmartPhones.get(deviceIndex).getAddress();
         partnerTextView.setText(mBTDeviceName);
     }
 
-    public void startsBTservice(){
+    public void startsBTService() {
         mBluetoothAdapter.cancelDiscovery();
-        if (mBluetoothConnection == null){mBluetoothConnection = new BluetoothConnectionService(MainActivity.this);}
+        if (mBluetoothConnection == null) {
+            mBluetoothConnection = new BluetoothConnectionService(MainActivity.this);
+            mBluetoothConnection.setBluetoothListener(this);
+        }
     }
 
     public void game() {
         int result;
-        if (myHandInt != 0 && partnerHandInt != 0) {
+        if (!readyButton.isEnabled() && partnerHandInt != 0) {
             if (myHandInt == partnerHandInt) {
                 result = 1;
                 ResultDialog resultDialog = new ResultDialog(result, myHandInt, partnerHandInt);
@@ -236,7 +206,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void initBackgroundAnim(){
+    public void initBackgroundAnim() {
         ConstraintLayout constraintLayout = findViewById(R.id.main_layout);
         AnimationDrawable animationDrawable = (AnimationDrawable) constraintLayout.getBackground();
         animationDrawable.setEnterFadeDuration(2000);
@@ -253,5 +223,51 @@ public class MainActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         //disconnect from device
+    }
+
+    @Override
+    protected void onDestroy() {
+        mBluetoothConnection.setBluetoothListener(null);
+        handler = null;
+        super.onDestroy();
+    }
+
+    @Override
+    public void onConnected(BluetoothDevice device) {
+        handler.post(() -> {
+            mBTDeviceName = device.getName();
+            partnerTextView.setText(mBTDeviceName);
+            connectButton.setEnabled(false);
+            connectButton.setText("connected");
+            nextButton.setEnabled(false);
+            previousButton.setEnabled(false);
+            readyButton.setEnabled(true);
+        });
+    }
+
+    @Override
+    public void onReceive(int bytes) {
+        partnerHandInt = bytes;
+        game();
+    }
+
+
+    @Override
+    public void onConnectionFailed() {
+    }
+
+    public void reset() {
+        myHandInt = 0;
+        partnerHandInt = 0;
+        deviceIndex = 0;
+        radialButton.setBackgroundResource(R.drawable.radial_default);
+        rockButton.setEnabled(true);
+        paperButton.setEnabled(true);
+        scissorsButton.setEnabled(true);
+        connectButton.setEnabled(true);
+        readyButton.setEnabled(false);
+        nextButton.setEnabled(true);
+        previousButton.setEnabled(true);
+        checkBTState();
     }
 }

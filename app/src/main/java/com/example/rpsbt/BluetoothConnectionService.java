@@ -6,7 +6,6 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
 import android.content.Context;
-import android.content.Intent;
 import android.util.Log;
 
 import java.io.IOException;
@@ -14,7 +13,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.UUID;
 
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import androidx.annotation.Nullable;
 
 public class BluetoothConnectionService {
     private static final UUID MY_UUID_INSECURE = UUID.fromString("cd96e854-743e-49b7-b2bb-a9a9f2cf93e5");
@@ -37,6 +36,20 @@ public class BluetoothConnectionService {
 
     private Context mContext;
 
+
+    //TODO what is this nullable do
+    @Nullable
+    BluetoothListener bluetoothListener = null;
+
+    interface BluetoothListener {
+        void onConnected(BluetoothDevice device);
+        void onReceive(int bytes);
+        void onConnectionFailed();
+    }
+
+    public void setBluetoothListener(@Nullable BluetoothListener bluetoothListener) {
+        this.bluetoothListener = bluetoothListener;
+    }
 
     public BluetoothConnectionService(Context context) {
         mContext = context;
@@ -86,9 +99,6 @@ public class BluetoothConnectionService {
 
         mConnectedThread = new ConnectedThread(mmSocket);
         mConnectedThread.start();
-
-        Intent connected = new Intent("connectedBroadcast");
-        LocalBroadcastManager.getInstance(mContext).sendBroadcast(connected);
     }
 
     public void write(int out) {
@@ -215,18 +225,21 @@ public class BluetoothConnectionService {
             mmOutStream = tmpOut;
         }
 
-        public void run(){
+        public void run() {
             int bytes;
-            Intent incomingMessageIntent = new Intent("incomingMessage");
+
+            if (bluetoothListener != null) {
+                mmDevice = mmSocket.getRemoteDevice();
+                bluetoothListener.onConnected(mmDevice);
+            }
 
             while (true) {
                 try {
                     bytes = mmInStream.read();
                     Log.d(TAG, "InputStream: " + bytes);
 
-                    if (bytes > 0){
-                        incomingMessageIntent.putExtra("theMessage", bytes);
-                        LocalBroadcastManager.getInstance(mContext).sendBroadcast(incomingMessageIntent);
+                    if (bytes > 0) {
+                        bluetoothListener.onReceive(bytes);
                         bytes = 0;
                     }
                 } catch (IOException e) {

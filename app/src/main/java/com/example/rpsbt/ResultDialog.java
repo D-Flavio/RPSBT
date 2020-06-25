@@ -24,7 +24,7 @@ public class ResultDialog extends AppCompatDialogFragment {
     private ImageView handImage;
     private ImageView opponentHandImage;
 
-    public ResultDialog(int result, int hand, int opponentHand){
+    public ResultDialog(int result, int hand, int opponentHand) {
         this.result = result;
         this.hand = hand;
         this.opponentHand = opponentHand;
@@ -45,7 +45,7 @@ public class ResultDialog extends AppCompatDialogFragment {
         handImage = view.findViewById(R.id.hand);
         opponentHandImage = view.findViewById(R.id.opponentHand);
 
-        switch(result){
+        switch(result) {
             case 1:
                 resultImage.setBackgroundResource(R.drawable.tie);
                 resultDialog.setBackgroundColor(Color.parseColor("#b6b7b5"));
@@ -60,7 +60,7 @@ public class ResultDialog extends AppCompatDialogFragment {
                 break;
         }
 
-        switch(hand){
+        switch(hand) {
             case 1:
                 handImage.setBackgroundResource(R.drawable.rock);
                 break;
@@ -72,7 +72,7 @@ public class ResultDialog extends AppCompatDialogFragment {
                 break;
         }
 
-        switch(opponentHand){
+        switch(opponentHand) {
             case 1:
                 opponentHandImage.setBackgroundResource(R.drawable.rock);
                 break;
