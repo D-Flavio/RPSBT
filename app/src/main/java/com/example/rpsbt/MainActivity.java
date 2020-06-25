@@ -4,8 +4,6 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
 
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothClass;
 import android.bluetooth.BluetoothDevice;
 import android.graphics.drawable.AnimationDrawable;
 import android.os.Bundle;
@@ -14,23 +12,10 @@ import android.os.Looper;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
-
-import java.util.ArrayList;
-import java.util.Set;
-import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity implements BluetoothConnectionService.BluetoothListener {
 
-    private BluetoothAdapter mBluetoothAdapter;
-
-    private BluetoothConnectionService mBluetoothConnection;
-
-    private static final UUID RPSBT_UUID = UUID.fromString("cd96e854-743e-49b7-b2bb-a9a9f2cf93e5");
-
-    private BluetoothDevice mBTDevice;
-
-    private String mBTDeviceName;
+    BluetoothManager mBluetoothManager;
 
     private ImageView radialButton;
 
@@ -44,11 +29,13 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
     private Button nextButton;
     private Button previousButton;
 
-    private ArrayList<BluetoothDevice> BTSmartPhones;
-
     private int myHandInt;
     private int partnerHandInt;
     private int deviceIndex;
+    private int numOfPairedPhones;
+
+    @Nullable
+    private Handler handler = null;
 
     //TODO check button scopes
     //TODO check on variable scopes
@@ -57,17 +44,10 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
     //TODO dialog window close should not close app but "reset" it
     //TODO dialog finish doesnt destroy app
 
-    @Nullable
-    Handler handler = null;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-
-        BTSmartPhones = new ArrayList<>();
 
         handler = new Handler(Looper.getMainLooper());
 
@@ -83,9 +63,12 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
         previousButton  = findViewById(R.id.previous);
         partnerTextView = findViewById(R.id.deviceName);
 
-        initBackgroundAnim();
+        mBluetoothManager = new BluetoothManager(this);
+        mBluetoothManager.checkBT();
+        numOfPairedPhones = mBluetoothManager.getBTSmartPhonesSize();
+        partnerTextView.setText(mBluetoothManager.getBluetoothDeviceName(deviceIndex));
 
-        checkBT();
+        initBackgroundAnim();
 
         connectButton.setEnabled(true);
         nextButton.setEnabled(true);
@@ -110,7 +93,7 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
             connectButton.setEnabled(false);
             nextButton.setEnabled(false);
             previousButton.setEnabled(false);
-            mBluetoothConnection.startConnecting(mBTDevice, RPSBT_UUID);
+            mBluetoothManager.startConnecting(deviceIndex);
         });
 
         readyButton.setOnClickListener(v -> {
@@ -118,69 +101,31 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
             rockButton.setEnabled(false);
             paperButton.setEnabled(false);
             scissorsButton.setEnabled(false);
-            mBluetoothConnection.write(myHandInt);
+            mBluetoothManager.write(myHandInt);
             game();
         });
 
         nextButton.setOnClickListener(v -> {
-            if (deviceIndex==BTSmartPhones.size() -1){
+            if (deviceIndex==numOfPairedPhones -1) {
                 deviceIndex = 0;
-                getDeviceAtIndex();
+                partnerTextView.setText(mBluetoothManager.getBluetoothDeviceName(deviceIndex));
             }else {
                 deviceIndex++;
-                getDeviceAtIndex();
+                partnerTextView.setText(mBluetoothManager.getBluetoothDeviceName(deviceIndex));
             }
         });
 
         previousButton.setOnClickListener(v -> {
-            if (deviceIndex==0){
-                deviceIndex = BTSmartPhones.size() -1;
-                getDeviceAtIndex();
+            if (deviceIndex==0) {
+                deviceIndex = numOfPairedPhones -1;
+                partnerTextView.setText(mBluetoothManager.getBluetoothDeviceName(deviceIndex));
             }else {
                 deviceIndex--;
-                getDeviceAtIndex();
+                partnerTextView.setText(mBluetoothManager.getBluetoothDeviceName(deviceIndex));
             }
         });
     }
-
-    public void checkBT() {
-        if (mBluetoothAdapter != null) {
-            checkBTState();
-        } else {
-            Toast.makeText(this, "Device doesn't support Bluetooth", Toast.LENGTH_LONG).show();
-        }
-    }
-
-    public void checkBTState() {
-        if (mBluetoothAdapter.isEnabled()) {
-            Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
-            BTSmartPhones.clear();
-            for (BluetoothDevice device : pairedDevices) {
-                if (device.getBluetoothClass().getDeviceClass() == BluetoothClass.Device.PHONE_SMART) {
-                    BTSmartPhones.add(device);
-                }
-            }
-            if (BTSmartPhones.size() > 0) {
-                deviceIndex = 0;
-                getDeviceAtIndex();
-                startsBTService();
-            }else { Toast.makeText(this, "No paired smart phones", Toast.LENGTH_LONG).show(); }
-        }else { Toast.makeText(this, "Bluetooth is disabled", Toast.LENGTH_LONG).show(); }
-    }
-
-    public void getDeviceAtIndex() {
-        mBTDevice = BTSmartPhones.get(deviceIndex);
-        mBTDeviceName = BTSmartPhones.get(deviceIndex).getName();
-        partnerTextView.setText(mBTDeviceName);
-    }
-
-    public void startsBTService() {
-        mBluetoothAdapter.cancelDiscovery();
-        if (mBluetoothConnection == null) {
-            mBluetoothConnection = new BluetoothConnectionService(MainActivity.this);
-            mBluetoothConnection.setBluetoothListener(this);
-        }
-    }
+            mBluetoothConnection.setBluetoothListener(this)
 
     public void game() {
         int result;
@@ -235,8 +180,7 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
     @Override
     public void onConnected(BluetoothDevice device) {
         handler.post(() -> {
-            mBTDeviceName = device.getName();
-            partnerTextView.setText(mBTDeviceName);
+            partnerTextView.setText(device.getName());
             connectButton.setEnabled(false);
             connectButton.setText("connected");
             nextButton.setEnabled(false);
@@ -268,6 +212,6 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
         readyButton.setEnabled(false);
         nextButton.setEnabled(true);
         previousButton.setEnabled(true);
-        checkBTState();
+        mBluetoothManager.checkBTState();
     }
 }
