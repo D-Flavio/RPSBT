@@ -39,10 +39,11 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
 
     //TODO check button scopes
     //TODO check on variable scopes
-    //TODO put in disconnect resetting
+    //TODO put in disconnect resetting, maybe with broadcastreceiver for ACTION_ACL_DISCONNECTED
     //TODO after result resetting
     //TODO dialog window close should not close app but "reset" it
     //TODO dialog finish doesnt destroy app
+    //TODO clean up service class
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,7 +64,7 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
         previousButton  = findViewById(R.id.previous);
         partnerTextView = findViewById(R.id.deviceName);
 
-        mBluetoothManager = new BluetoothManager(this);
+        mBluetoothManager = new BluetoothManager(this, this);
         mBluetoothManager.checkBT();
         numOfPairedPhones = mBluetoothManager.getBTSmartPhonesSize();
         partnerTextView.setText(mBluetoothManager.getBluetoothDeviceName(deviceIndex));
@@ -125,7 +126,6 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
             }
         });
     }
-            mBluetoothConnection.setBluetoothListener(this)
 
     public void game() {
         int result;
@@ -172,7 +172,7 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
 
     @Override
     protected void onDestroy() {
-        mBluetoothConnection.setBluetoothListener(null);
+        mBluetoothManager.setListenerToNull();
         handler = null;
         super.onDestroy();
     }

@@ -18,12 +18,6 @@ public class ResultDialog extends AppCompatDialogFragment {
     private int hand;
     private int opponentHand;
 
-    private LinearLayout resultDialog;
-
-    private ImageView resultImage;
-    private ImageView handImage;
-    private ImageView opponentHandImage;
-
     public ResultDialog(int result, int hand, int opponentHand) {
         this.result = result;
         this.hand = hand;
@@ -40,10 +34,10 @@ public class ResultDialog extends AppCompatDialogFragment {
         builder.setView(view)
                 .setPositiveButton("Return", (DialogInterface dialog, int which) -> getActivity().finish());
 
-        resultDialog = view.findViewById(R.id.resultDialog);
-        resultImage = view.findViewById(R.id.result);
-        handImage = view.findViewById(R.id.hand);
-        opponentHandImage = view.findViewById(R.id.opponentHand);
+        LinearLayout resultDialog = view.findViewById(R.id.resultDialog);
+        ImageView resultImage = view.findViewById(R.id.result);
+        ImageView handImage = view.findViewById(R.id.hand);
+        ImageView opponentHandImage = view.findViewById(R.id.opponentHand);
 
         switch(result) {
             case 1:

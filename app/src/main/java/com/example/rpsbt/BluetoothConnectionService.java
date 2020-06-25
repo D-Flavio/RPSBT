@@ -158,6 +158,7 @@ public class BluetoothConnectionService {
             } catch (IOException e) {
                 try {
                     mmSocket.close();
+                    bluetoothListener.onConnectionFailed();
                 } catch (IOException e1) {
                 }
             }
