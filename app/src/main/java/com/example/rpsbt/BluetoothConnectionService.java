@@ -39,7 +39,6 @@ public class BluetoothConnectionService {
     public BluetoothConnectionService(Context context) {
         mContext = context;
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        startAccepting();
     }
 
     @Nullable
@@ -57,7 +56,6 @@ public class BluetoothConnectionService {
     }
 
     public synchronized void startAccepting() {
-        Log.d(TAG, "startAccepting");
 
         if (mConnectThread != null) {
             mConnectThread.cancel();
@@ -70,7 +68,6 @@ public class BluetoothConnectionService {
     }
 
     public synchronized void cancelThreads() {
-        Log.d(TAG, "cancelThreads");
 
         if (mConnectThread != null) {
             mConnectThread.cancel();

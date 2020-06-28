@@ -16,6 +16,7 @@ import android.os.Looper;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity implements BluetoothConnectionService.BluetoothListener, ResultDialog.DialogListener {
 
@@ -52,7 +53,8 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
             BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
             if (device ==  connectedDevice) {
                 if (BluetoothDevice.ACTION_ACL_DISCONNECTED.equals(action)) {
-                    //do disconnect process
+                    Toast.makeText(getApplicationContext(), "connection lost", Toast.LENGTH_LONG).show();
+                    reset();
                 }
             }
         }
@@ -207,6 +209,7 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
     protected void onDestroy() {
         resultDialog.setdialogListener(null);
         mBluetoothManager.setListenerToNull();
+        unregisterReceiver(disconnectReceiver);
         handler = null;
         super.onDestroy();
     }
@@ -254,6 +257,7 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
         readyButton.setEnabled(false);
         nextButton.setEnabled(true);
         previousButton.setEnabled(true);
+        mBluetoothManager.cancelThreads();
         something();
     }
 
