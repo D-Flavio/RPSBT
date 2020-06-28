@@ -52,6 +52,7 @@ public class BluetoothConnectionService {
     }
 
     public void setBluetoothListener(@Nullable BluetoothListener bluetoothListener) {
+        if (bluetoothListener != null)
         this.bluetoothListener = bluetoothListener;
     }
 
@@ -68,7 +69,7 @@ public class BluetoothConnectionService {
         }
     }
 
-    public synchronized void cancelThreads(){
+    public synchronized void cancelThreads() {
         Log.d(TAG, "cancelThreads");
 
         if (mConnectThread != null) {
@@ -91,7 +92,7 @@ public class BluetoothConnectionService {
         mConnectThread.start();
     }
 
-    private void connected(BluetoothSocket mmSocket, BluetoothDevice mmDevice) {
+    private void connected(BluetoothSocket mmSocket) {
 
         mConnectedThread = new ConnectedThread(mmSocket);
         mConnectedThread.start();
@@ -113,7 +114,7 @@ public class BluetoothConnectionService {
             mmServerSocket = tmp;
         }
 
-        public void run(){
+        public void run() {
 
             BluetoothSocket socket = null;
 
@@ -122,7 +123,7 @@ public class BluetoothConnectionService {
             }catch (IOException e){
             }
             if(socket != null){
-                connected(socket,mmDevice);
+                connected(socket);
             }
         }
 
@@ -162,7 +163,7 @@ public class BluetoothConnectionService {
                 } catch (IOException e1) {
                 }
             }
-            connected(mmSocket,mmDevice);
+            connected(mmSocket);
         }
 
         public void cancel() {
@@ -214,7 +215,6 @@ public class BluetoothConnectionService {
 
                     if (bytes > 0) {
                         bluetoothListener.onReceive(bytes);
-                        bytes = 0;
                     }
                 } catch (IOException e) {
                     break;

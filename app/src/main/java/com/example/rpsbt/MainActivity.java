@@ -5,6 +5,10 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
 
 import android.bluetooth.BluetoothDevice;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.drawable.AnimationDrawable;
 import android.os.Bundle;
 import android.os.Handler;
@@ -13,7 +17,7 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-public class MainActivity extends AppCompatActivity implements BluetoothConnectionService.BluetoothListener {
+public class MainActivity extends AppCompatActivity implements BluetoothConnectionService.BluetoothListener, ResultDialog.DialogListener {
 
     BluetoothManager mBluetoothManager;
 
@@ -29,6 +33,10 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
     private Button nextButton;
     private Button previousButton;
 
+    private ResultDialog resultDialog;
+
+    private BluetoothDevice connectedDevice;
+
     private int myHandInt;
     private int partnerHandInt;
     private int deviceIndex;
@@ -37,13 +45,26 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
     @Nullable
     private Handler handler = null;
 
+    BroadcastReceiver disconnectReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+            if (device ==  connectedDevice) {
+                if (BluetoothDevice.ACTION_ACL_DISCONNECTED.equals(action)) {
+                    //do disconnect process
+                }
+            }
+        }
+    };
+
     //TODO check button scopes
     //TODO check on variable scopes
-    //TODO put in disconnect resetting, maybe with broadcastreceiver for ACTION_ACL_DISCONNECTED
-    //TODO after result resetting
-    //TODO dialog window close should not close app but "reset" it
-    //TODO dialog finish doesnt destroy app
     //TODO clean up service class
+    //TODO connectedthread while loop big think
+    //TODO instead of progressdialog use progressbar
+    //TODO Bluetoothmanagger BT not enabled, can not get remote device name fix
+    //TODO figure out why nullpointerexteption happens when app starts with bluetooth off, then during app bluetooth is turned on, then closing the app ondestroy runs and gets nullpointer on setlistenertonull
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,9 +86,12 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
         partnerTextView = findViewById(R.id.deviceName);
 
         mBluetoothManager = new BluetoothManager(this, this);
-        mBluetoothManager.checkBT();
-        numOfPairedPhones = mBluetoothManager.getBTSmartPhonesSize();
-        partnerTextView.setText(mBluetoothManager.getBluetoothDeviceName(deviceIndex));
+
+        something();
+
+        IntentFilter disconnectFilter = new IntentFilter(BluetoothDevice.ACTION_ACL_DISCONNECTED);
+        this.registerReceiver(disconnectReceiver, disconnectFilter);
+
 
         initBackgroundAnim();
 
@@ -127,28 +151,37 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
         });
     }
 
+    public void something() {
+        mBluetoothManager.checkBT();
+        numOfPairedPhones = mBluetoothManager.getBTSmartPhonesSize();
+        partnerTextView.setText(mBluetoothManager.getBluetoothDeviceName(deviceIndex));
+    }
+
     public void game() {
         int result;
         if (!readyButton.isEnabled() && partnerHandInt != 0) {
             if (myHandInt == partnerHandInt) {
                 result = 1;
-                ResultDialog resultDialog = new ResultDialog(result, myHandInt, partnerHandInt);
-                resultDialog.show(getSupportFragmentManager(), "resultDialog");
+                dialogTempName(result);
                 //tie
             }
             else if (((3 + myHandInt - partnerHandInt) % 3 ) % 2 == 1) {
                 result = 2;
-                ResultDialog resultDialog = new ResultDialog(result, myHandInt, partnerHandInt);
-                resultDialog.show(getSupportFragmentManager(), "resultDialog");
+                dialogTempName(result);
                 //win
             }
             else {
                 result = 3;
-                ResultDialog resultDialog = new ResultDialog(result, myHandInt, partnerHandInt);
-                resultDialog.show(getSupportFragmentManager(), "resultDialog");
+                dialogTempName(result);
                 //lose
             }
         }
+    }
+
+    public void dialogTempName(int result) {
+        resultDialog = new ResultDialog(result, myHandInt, partnerHandInt);
+        resultDialog.setdialogListener(this);
+        resultDialog.show(getSupportFragmentManager(), "resultDialog");
     }
 
     public void initBackgroundAnim() {
@@ -172,6 +205,7 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
 
     @Override
     protected void onDestroy() {
+        resultDialog.setdialogListener(null);
         mBluetoothManager.setListenerToNull();
         handler = null;
         super.onDestroy();
@@ -180,6 +214,7 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
     @Override
     public void onConnected(BluetoothDevice device) {
         handler.post(() -> {
+            connectedDevice = device;
             partnerTextView.setText(device.getName());
             connectButton.setEnabled(false);
             connectButton.setText("connected");
@@ -198,6 +233,12 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
 
     @Override
     public void onConnectionFailed() {
+
+    }
+
+    @Override
+    public void onPositiveButtonPress() {
+        reset();
     }
 
     public void reset() {
@@ -209,9 +250,12 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
         paperButton.setEnabled(true);
         scissorsButton.setEnabled(true);
         connectButton.setEnabled(true);
+        connectButton.setText("connect");
         readyButton.setEnabled(false);
         nextButton.setEnabled(true);
         previousButton.setEnabled(true);
-        mBluetoothManager.checkBTState();
+        something();
     }
+
+
 }

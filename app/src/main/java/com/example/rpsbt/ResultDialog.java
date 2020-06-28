@@ -10,6 +10,7 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatDialogFragment;
 
 public class ResultDialog extends AppCompatDialogFragment {
@@ -24,6 +25,17 @@ public class ResultDialog extends AppCompatDialogFragment {
         this.opponentHand = opponentHand;
     }
 
+    @Nullable
+    ResultDialog.DialogListener dialogListener = null;
+
+    interface DialogListener {
+        void onPositiveButtonPress();
+    }
+
+    public void setdialogListener(@Nullable ResultDialog.DialogListener dialogListener) {
+        this.dialogListener = dialogListener;
+    }
+
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
@@ -32,7 +44,7 @@ public class ResultDialog extends AppCompatDialogFragment {
         View view = inflater.inflate(R.layout.result_dialog, null);
 
         builder.setView(view)
-                .setPositiveButton("Return", (DialogInterface dialog, int which) -> getActivity().finish());
+                .setNegativeButton("Return", (DialogInterface dialog, int which) -> dialogListener.onPositiveButtonPress());
 
         LinearLayout resultDialog = view.findViewById(R.id.resultDialog);
         ImageView resultImage = view.findViewById(R.id.result);
