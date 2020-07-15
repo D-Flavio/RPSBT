@@ -19,7 +19,11 @@ public class ResultDialog extends AppCompatDialogFragment {
     private int hand;
     private int opponentHand;
 
-    public ResultDialog(int result, int hand, int opponentHand) {
+    public ResultDialog() {
+
+    }
+
+    public void setVariables(int result, int hand, int opponentHand) {
         this.result = result;
         this.hand = hand;
         this.opponentHand = opponentHand;
@@ -32,8 +36,8 @@ public class ResultDialog extends AppCompatDialogFragment {
         void onPositiveButtonPress();
     }
 
-    public void setdialogListener(@Nullable ResultDialog.DialogListener dialogListener) {
-        this.dialogListener = dialogListener;
+    public void setDialogListener(@Nullable ResultDialog.DialogListener dialogListener) {
+            this.dialogListener = dialogListener;
     }
 
     @Override

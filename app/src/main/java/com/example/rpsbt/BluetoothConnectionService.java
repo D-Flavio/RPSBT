@@ -6,7 +6,6 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
 import android.content.Context;
-import android.util.Log;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -42,17 +41,18 @@ public class BluetoothConnectionService {
     }
 
     @Nullable
-    BluetoothListener bluetoothListener = null;
+    ConnectionListener mConnectionListener = null;
 
-    interface BluetoothListener {
+    interface ConnectionListener {
         void onConnected(BluetoothDevice device);
-        void onReceive(int bytes);
+        void onBTRead(int bytes);
         void onConnectionFailed();
+        void onDisconnect();
     }
 
-    public void setBluetoothListener(@Nullable BluetoothListener bluetoothListener) {
-        if (bluetoothListener != null)
-        this.bluetoothListener = bluetoothListener;
+    public void setBluetoothListener(@Nullable ConnectionListener connectionListener) {
+        if (connectionListener != null)
+        this.mConnectionListener = connectionListener;
     }
 
     public synchronized void startAccepting() {
@@ -77,10 +77,14 @@ public class BluetoothConnectionService {
             mInsecureAcceptThread.cancel();
             mInsecureAcceptThread = null;
         }
-        if (mConnectedThread != null){
+        if (mConnectedThread != null) {
             mConnectedThread.cancel();
             mConnectedThread = null;
         }
+    }
+
+    public boolean isConnected() {
+        return mConnectedThread != null;
     }
 
     public void startConnecting(BluetoothDevice device) {
@@ -156,7 +160,7 @@ public class BluetoothConnectionService {
             } catch (IOException e) {
                 try {
                     mmSocket.close();
-                    bluetoothListener.onConnectionFailed();
+                    mConnectionListener.onConnectionFailed();
                 } catch (IOException e1) {
                 }
             }
@@ -181,10 +185,10 @@ public class BluetoothConnectionService {
             InputStream tmpIn = null;
             OutputStream tmpOut = null;
 
-            try{
-                mProgressDialog.dismiss();
-            }catch (NullPointerException e){
-                e.printStackTrace();
+            if(mProgressDialog != null) {
+                if (mProgressDialog.isShowing()) {
+                    mProgressDialog.dismiss();
+                }
             }
 
             try {
@@ -201,9 +205,9 @@ public class BluetoothConnectionService {
         public void run() {
             int bytes;
 
-            if (bluetoothListener != null) {
+            if (mConnectionListener != null) {
                 mmDevice = mmSocket.getRemoteDevice();
-                bluetoothListener.onConnected(mmDevice);
+                mConnectionListener.onConnected(mmDevice);
             }
 
             while (true) {
@@ -211,9 +215,10 @@ public class BluetoothConnectionService {
                     bytes = mmInStream.read();
 
                     if (bytes > 0) {
-                        bluetoothListener.onReceive(bytes);
+                        mConnectionListener.onBTRead(bytes);
                     }
                 } catch (IOException e) {
+                    mConnectionListener.onDisconnect();
                     break;
                 }
             }
@@ -223,6 +228,7 @@ public class BluetoothConnectionService {
             try {
                 mmOutStream.write(out);
             } catch (IOException e) {
+                mConnectionListener.onDisconnect();
             }
         }
 
