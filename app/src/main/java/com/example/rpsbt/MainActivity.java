@@ -57,7 +57,6 @@ public class MainActivity extends AppCompatActivity implements BluetoothManager.
                     final int extraState = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR);
                     switch (extraState) {
                         case BluetoothAdapter.STATE_OFF:
-                            Toast.makeText(getApplicationContext(), "Bluetooth is disabled", Toast.LENGTH_LONG).show();
                             connectButton.setEnabled(false);
                             resetBT();
                             break;
@@ -83,9 +82,6 @@ public class MainActivity extends AppCompatActivity implements BluetoothManager.
             }
         }
     };
-
-    //TODO clean up service class
-    //TODO toast pops up twice when bluetooth is turned off
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
