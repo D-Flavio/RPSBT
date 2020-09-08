@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
 import android.content.Context;
+import android.util.Log;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -111,6 +112,7 @@ public class BluetoothConnectionService {
             try{
                 tmp = mBluetoothAdapter.listenUsingInsecureRfcommWithServiceRecord(appName, RPSBT_UUID);
             }catch (IOException e){
+                Log.e(TAG, "Error while listening through rfcomm");
             }
             mmServerSocket = tmp;
         }
@@ -122,6 +124,7 @@ public class BluetoothConnectionService {
             try{
                 socket = mmServerSocket.accept();
             }catch (IOException e){
+                Log.e(TAG, "Error accepting");
             }
             if(socket != null){
                 connected(socket);
@@ -132,6 +135,7 @@ public class BluetoothConnectionService {
             try {
                 mmServerSocket.close();
             } catch (IOException e) {
+                Log.e(TAG, "Error closing server socket");
             }
         }
     }
@@ -150,6 +154,7 @@ public class BluetoothConnectionService {
             try {
                 tmp = mmDevice.createRfcommSocketToServiceRecord(deviceUUID);
             } catch (IOException e) {
+                Log.e(TAG, "Error creating rfcommSocket");
             }
 
             mmSocket = tmp;
@@ -162,6 +167,7 @@ public class BluetoothConnectionService {
                     mmSocket.close();
                     mConnectionListener.onConnectionFailed();
                 } catch (IOException e1) {
+                    Log.e(TAG, "Error closing socket");
                 }
             }
             connected(mmSocket);
@@ -171,6 +177,7 @@ public class BluetoothConnectionService {
             try {
                 mmSocket.close();
             } catch (IOException e) {
+                Log.e(TAG, "Error closing socket");
             }
         }
     }
@@ -235,7 +242,9 @@ public class BluetoothConnectionService {
         public void cancel() {
             try {
                 mmSocket.close();
-            } catch (IOException e) { }
+            } catch (IOException e) {
+                Log.e(TAG, "Error closing socket");
+            }
         }
     }
 }

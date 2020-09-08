@@ -85,6 +85,7 @@ public class MainActivity extends AppCompatActivity implements BluetoothManager.
     };
 
     //TODO clean up service class
+    //TODO toast pops up twice when bluetooth is turned off
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
